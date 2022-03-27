@@ -22,6 +22,7 @@ import (
 	"unsafe"
 
 	api "github.com/tigrisdata/tigrisdb-client-go/api/server/v1"
+	"github.com/tigrisdata/tigrisdb-client-go/config"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -49,7 +50,7 @@ func GRPCError(err error) error {
 	return &api.TigrisDBError{Code: s.Code(), Message: s.Message()}
 }
 
-func NewGRPCClient(ctx context.Context, url string, config *Config) (Driver, error) {
+func NewGRPCClient(ctx context.Context, url string, config *config.Config) (Driver, error) {
 	token, oCfg, ctxClient := getAuthToken(ctx, config)
 
 	ts := oCfg.TokenSource(ctxClient, token)

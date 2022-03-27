@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tigrisdata/tigrisdb-client-go/config"
 	"golang.org/x/oauth2"
 )
 
@@ -50,7 +51,7 @@ type txWithOptions interface {
 	Rollback(ctx context.Context) error
 }
 
-func getAuthToken(ctx context.Context, config *Config) (*oauth2.Token, *oauth2.Config, context.Context) {
+func getAuthToken(ctx context.Context, config *config.Config) (*oauth2.Token, *oauth2.Config, context.Context) {
 	token := config.Token
 	if os.Getenv(TokenEnv) != "" {
 		token = os.Getenv(TokenEnv)

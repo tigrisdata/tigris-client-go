@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+
+	"github.com/tigrisdata/tigrisdb-client-go/config"
 )
 
 // Driver implements TigrisDB API
@@ -122,7 +124,7 @@ func (c *driver) AlterCollection(ctx context.Context, db string, collection stri
 		return err
 	}
 
-	return c.createCollectionWithOptions(ctx, db, collection, schema, opts.(*CollectionOptions))
+	return c.alterCollectionWithOptions(ctx, db, collection, schema, opts.(*CollectionOptions))
 }
 
 func (c *driver) DropCollection(ctx context.Context, db string, collection string, options ...*CollectionOptions) error {
@@ -222,14 +224,14 @@ func validateOptionsParam(options interface{}) (interface{}, error) {
 
 // NewDriver connect to TigrisDB at the specified URL
 // URL should be in the form: {hostname}:{port}
-func NewDriver(ctx context.Context, url string, config *Config) (Driver, error) {
-	if config == nil {
-		config = &Config{}
+func NewDriver(ctx context.Context, cfg *config.Config) (Driver, error) {
+	if cfg == nil {
+		cfg = &config.Config{}
 	}
 	if DefaultProtocol == GRPC {
-		return NewGRPCClient(ctx, url, config)
+		return NewGRPCClient(ctx, cfg.URL, cfg)
 	} else if DefaultProtocol == HTTP {
-		return NewHTTPClient(ctx, url, config)
+		return NewHTTPClient(ctx, cfg.URL, cfg)
 	}
 	return nil, fmt.Errorf("unsupported protocol")
 }

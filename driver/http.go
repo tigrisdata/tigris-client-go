@@ -26,6 +26,7 @@ import (
 
 	apiHTTP "github.com/tigrisdata/tigrisdb-client-go/api/client/v1/api"
 	api "github.com/tigrisdata/tigrisdb-client-go/api/server/v1"
+	"github.com/tigrisdata/tigrisdb-client-go/config"
 	"google.golang.org/grpc/codes"
 )
 
@@ -90,7 +91,7 @@ func setHeaders(_ context.Context, req *http.Request) error {
 	return nil
 }
 
-func NewHTTPClient(ctx context.Context, url string, config *Config) (Driver, error) {
+func NewHTTPClient(ctx context.Context, url string, config *config.Config) (Driver, error) {
 	token, oCfg, ctxClient := getAuthToken(ctx, config)
 
 	if !strings.Contains(url, ":") {

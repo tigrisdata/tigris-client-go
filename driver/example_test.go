@@ -17,12 +17,14 @@ package driver
 import (
 	"context"
 	"fmt"
+
+	"github.com/tigrisdata/tigrisdb-client-go/config"
 )
 
 func ExampleDriver() {
 	ctx := context.TODO()
 
-	c, _ := NewDriver(ctx, "localhost", &Config{})
+	c, _ := NewDriver(ctx, &config.Config{URL: "localhost"})
 
 	_ = c.CreateDatabase(ctx, "db1", &DatabaseOptions{})
 

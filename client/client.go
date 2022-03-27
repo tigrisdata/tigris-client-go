@@ -17,20 +17,67 @@ package client
 import (
 	"context"
 
+	"github.com/rs/zerolog/log"
+	"github.com/tigrisdata/tigrisdb-client-go/config"
 	"github.com/tigrisdata/tigrisdb-client-go/driver"
 )
 
 type Client interface {
+	Database(name string) Database
+}
+
+type Database interface {
+	MigrateSchema(ctx context.Context, model interface{}, models ...interface{}) error
+	Create(ctx context.Context) error
+	Drop(ctx context.Context) error
 }
 
 type client struct {
 	driver driver.Driver
 }
 
-func NewClient(ctx context.Context, url string, config *driver.Config) (Client, error) {
-	d, err := driver.NewDriver(ctx, url, config)
+type database struct {
+	*client
+	name string
+}
+
+func NewClient(ctx context.Context, config *config.Config) (Client, error) {
+	d, err := driver.NewDriver(ctx, config)
 	if err != nil {
 		return nil, err
 	}
 	return &client{d}, nil
+}
+
+func (c *client) Database(name string) Database {
+	return &database{client: c, name: name}
+}
+
+func (db *database) MigrateSchema(ctx context.Context, model interface{}, models ...interface{}) error {
+	//models parameter added to require at least one schema to migrate
+	models = append(models, model)
+	for _, m := range models {
+		schema, err := structToSchema(m)
+		if err != nil {
+			return err
+		}
+		sch, err := MarshalSchema(schema)
+		if err != nil {
+			return err
+		}
+		coll := modelName(m)
+		log.Debug().Interface("schema", schema).Str("collection", coll).Msg("MigrateSchema")
+		if err = db.driver.AlterCollection(ctx, db.name, coll, sch, &driver.CollectionOptions{}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (db *database) Create(ctx context.Context) error {
+	return db.driver.CreateDatabase(ctx, db.name, &driver.DatabaseOptions{})
+}
+
+func (db *database) Drop(ctx context.Context) error {
+	return db.driver.DropDatabase(ctx, db.name, &driver.DatabaseOptions{})
 }

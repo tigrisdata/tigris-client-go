@@ -12,6 +12,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.8.0
 	github.com/json-iterator/go v1.1.12
+	github.com/rs/zerolog v1.26.1
 	github.com/stretchr/testify v1.7.0
 	github.com/valyala/bytebufferpool v1.0.0
 	golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b
