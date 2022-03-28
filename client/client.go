@@ -16,6 +16,8 @@ package client
 
 import (
 	"context"
+	"encoding/json"
+	"reflect"
 
 	"github.com/rs/zerolog/log"
 	"github.com/tigrisdata/tigrisdb-client-go/config"
@@ -30,6 +32,12 @@ type Database interface {
 	MigrateSchema(ctx context.Context, model interface{}, models ...interface{}) error
 	Create(ctx context.Context) error
 	Drop(ctx context.Context) error
+	Insert(ctx context.Context, doc interface{}, docs ...interface{}) error
+	Tx(ctx context.Context, fn func(tx Tx) error) error
+}
+
+type Tx interface {
+	Insert(ctx context.Context, doc interface{}, docs ...interface{}) error
 }
 
 type client struct {
@@ -39,6 +47,11 @@ type client struct {
 type database struct {
 	*client
 	name string
+}
+
+type tx struct {
+	db *database
+	tx driver.Tx
 }
 
 func NewClient(ctx context.Context, config *config.Config) (Client, error) {
@@ -80,4 +93,77 @@ func (db *database) Create(ctx context.Context) error {
 
 func (db *database) Drop(ctx context.Context) error {
 	return db.driver.DropDatabase(ctx, db.name, &driver.DatabaseOptions{})
+}
+
+// batchDocs batches docs into per collection arrays
+func batchDocs(batch map[string][]driver.Document, docs []interface{}) error {
+	for _, d := range docs {
+		name := reflect.TypeOf(d).Name()
+		b, err := json.Marshal(d)
+		if err != nil {
+			return err
+		}
+
+		batch[name] = append(batch[name], b)
+	}
+
+	return nil
+}
+
+// Insert one or more documents into collection
+// Docs can be of different types (going to different collections)
+func (db *database) Insert(ctx context.Context, doc interface{}, docs ...interface{}) error {
+	docs = append(docs, doc)
+
+	var bdocs map[string][]driver.Document
+
+	if err := batchDocs(bdocs, docs); err != nil {
+		return err
+	}
+
+	for k, v := range bdocs {
+		_, err := db.driver.Insert(ctx, db.name, k, v)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Tx executes bunch of operations in a transaction
+func (db *database) Tx(ctx context.Context, fn func(tx Tx) error) error {
+	dtx, err := db.driver.BeginTx(ctx, db.name)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = dtx.Rollback(ctx) }()
+
+	tx := &tx{db, dtx}
+
+	if err = fn(tx); err != nil {
+		return err
+	}
+
+	return dtx.Commit(ctx)
+}
+
+// Insert one or more documents into collection in the transaction context
+func (tx *tx) Insert(ctx context.Context, doc interface{}, docs ...interface{}) error {
+	docs = append(docs, doc)
+
+	var bdocs map[string][]driver.Document
+
+	if err := batchDocs(bdocs, docs); err != nil {
+		return err
+	}
+
+	for k, v := range bdocs {
+		_, err := tx.db.driver.Insert(ctx, tx.db.name, k, v)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
