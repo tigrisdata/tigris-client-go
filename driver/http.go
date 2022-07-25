@@ -366,6 +366,14 @@ func (c *httpCRUD) convertEventsOptions(_ *EventsOptions) *apiHTTP.EventsRequest
 	return &apiHTTP.EventsRequestOptions{}
 }
 
+func (c *httpCRUD) convertPublishOptions(o *PublishOptions) *apiHTTP.PublishRequestOptions {
+	return &apiHTTP.PublishRequestOptions{}
+}
+
+func (c *httpCRUD) convertSubscribeOptions(_ *SubscribeOptions) *apiHTTP.SubscribeRequestOptions {
+	return &apiHTTP.SubscribeRequestOptions{}
+}
+
 func (c *httpCRUD) listCollectionsWithOptions(ctx context.Context, options *CollectionOptions) ([]string, error) {
 	ctx = setHTTPTxCtx(ctx, c.txCtx)
 
@@ -656,4 +664,37 @@ func ToString(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+func (c *httpCRUD) publishWithOptions(ctx context.Context, collection string, docs []Document, options *PublishOptions) (*PublishResponse, error) {
+	ctx = setHTTPTxCtx(ctx, c.txCtx)
+
+	resp, err := c.api.TigrisPublish(ctx, c.db, collection, apiHTTP.TigrisPublishJSONRequestBody{
+		Messages: (*[]json.RawMessage)(unsafe.Pointer(&docs)),
+		Options:  c.convertPublishOptions(options),
+	})
+
+	if err = HTTPError(err, resp); err != nil {
+		return nil, err
+	}
+
+	var d PublishResponse
+	if err := dmlRespDecode(resp.Body, &d); err != nil {
+		return nil, err
+	}
+
+	return &d, nil
+}
+
+func (c *httpCRUD) subscribeWithOptions(ctx context.Context, collection string, options *SubscribeOptions) (Iterator, error) {
+	ctx = setHTTPTxCtx(ctx, c.txCtx)
+
+	resp, err := c.api.TigrisSubscribe(ctx, c.db, collection, apiHTTP.TigrisSubscribeJSONBody{
+		Options: c.convertSubscribeOptions(options),
+	})
+
+	err = HTTPError(err, resp)
+	dec := json.NewDecoder(resp.Body)
+
+	return &readIterator{streamReader: &httpStreamReader{stream: dec, closer: resp.Body}, err: err, eof: err != nil}, nil
 }

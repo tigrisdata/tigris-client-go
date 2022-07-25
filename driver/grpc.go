@@ -416,3 +416,52 @@ func (g *grpcEventStreamReader) read() (Event, error) {
 func (g *grpcEventStreamReader) close() error {
 	return nil
 }
+
+func (c *grpcCRUD) publishWithOptions(ctx context.Context, collection string, docs []Document, options *PublishOptions) (*PublishResponse, error) {
+	ctx = setGRPCTxCtx(ctx, c.txCtx)
+
+	resp, err := c.api.Publish(ctx, &api.PublishRequest{
+		Db:         c.db,
+		Collection: collection,
+		Messages:   *(*[][]byte)(unsafe.Pointer(&docs)),
+		Options:    (*api.PublishRequestOptions)(options),
+	})
+
+	if err != nil {
+		return nil, GRPCError(err)
+	}
+
+	return (*PublishResponse)(resp), nil
+}
+
+type grpcSubscribeStreamReader struct {
+	stream api.Tigris_SubscribeClient
+}
+
+func (g *grpcSubscribeStreamReader) read() (Document, error) {
+	resp, err := g.stream.Recv()
+	if err != nil {
+		return nil, GRPCError(err)
+	}
+
+	return resp.Message, nil
+}
+
+func (g *grpcSubscribeStreamReader) close() error {
+	return nil
+}
+
+func (c *grpcCRUD) subscribeWithOptions(ctx context.Context, collection string, options *SubscribeOptions) (Iterator, error) {
+	ctx = setGRPCTxCtx(ctx, c.txCtx)
+
+	resp, err := c.api.Subscribe(ctx, &api.SubscribeRequest{
+		Db:         c.db,
+		Collection: collection,
+		Options:    (*api.SubscribeRequestOptions)(options),
+	})
+	if err != nil {
+		return nil, GRPCError(err)
+	}
+
+	return &readIterator{streamReader: &grpcSubscribeStreamReader{resp}}, nil
+}
