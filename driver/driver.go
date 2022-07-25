@@ -111,6 +111,10 @@ type Database interface {
 	DescribeCollection(ctx context.Context, collection string, options ...*CollectionOptions) (*DescribeCollectionResponse, error)
 
 	Events(ctx context.Context, collection string, options ...*EventsOptions) (EventIterator, error)
+
+	Publish(ctx context.Context, collection string, docs []Document, options ...*PublishOptions) (*PublishResponse, error)
+
+	Subscribe(ctx context.Context, collection string, options ...*SubscribeOptions) (Iterator, error)
 }
 
 type driver struct {
@@ -250,6 +254,24 @@ func (c *driverCRUD) Events(ctx context.Context, collection string, options ...*
 	}
 
 	return c.eventsWithOptions(ctx, collection, opts.(*EventsOptions))
+}
+
+func (c *driverCRUD) Publish(ctx context.Context, collection string, docs []Document, options ...*PublishOptions) (*PublishResponse, error) {
+	opts, err := validateOptionsParam(options, &PublishOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return c.publishWithOptions(ctx, collection, docs, opts.(*PublishOptions))
+}
+
+func (c *driverCRUD) Subscribe(ctx context.Context, collection string, options ...*SubscribeOptions) (Iterator, error) {
+	opts, err := validateOptionsParam(options, &SubscribeOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return c.subscribeWithOptions(ctx, collection, opts.(*SubscribeOptions))
 }
 
 func validateOptionsParam(options interface{}, out interface{}) (interface{}, error) {

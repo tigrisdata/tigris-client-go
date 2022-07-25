@@ -52,6 +52,8 @@ type UpdateOptions api.UpdateRequestOptions
 type DeleteOptions api.DeleteRequestOptions
 type ReadOptions api.ReadRequestOptions
 type EventsOptions api.EventsRequestOptions
+type PublishOptions api.PublishRequestOptions
+type SubscribeOptions api.SubscribeRequestOptions
 
 type CollectionOptions api.CollectionOptions
 type DatabaseOptions api.DatabaseOptions
@@ -61,6 +63,8 @@ type InsertResponse api.InsertResponse
 type ReplaceResponse api.ReplaceResponse
 type UpdateResponse api.UpdateResponse
 type DeleteResponse api.DeleteResponse
+type PublishResponse api.PublishResponse
+type SubscribeResponse api.SubscribeResponse
 
 type DescribeDatabaseResponse api.DescribeDatabaseResponse
 type DescribeCollectionResponse api.DescribeCollectionResponse
